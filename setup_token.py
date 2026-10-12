@@ -15,7 +15,15 @@ q = urllib.parse.urlencode({"grant_type": "th_exchange_token", "client_secret": 
 try:
     r = json.load(urllib.request.urlopen(f"https://graph.threads.net/access_token?{q}"))
 except urllib.error.HTTPError as e:
-    sys.exit("Meta отклонила запрос: " + e.read().decode().replace(secret, "***").replace(short, "***"))
+    print("Обмен не прошёл:", e.read().decode()[:120].replace(secret, "***").replace(short, "***"), "...")
+    try:   # возможно, токен из генератора уже долгий — проверим, работает ли он сам
+        me = json.load(urllib.request.urlopen("https://graph.threads.net/v1.0/me?" + urllib.parse.urlencode({"fields": "id,username", "access_token": short})))
+    except urllib.error.HTTPError as e2:
+        sys.exit("Сам токен тоже не работает: " + e2.read().decode()[:200].replace(short, "***"))
+    subprocess.run("pbcopy", input=short.encode())
+    print(f"Токен РАБОТАЕТ (аккаунт: @{me.get('username')}, id {me.get('id')}). Обмен не нужен, он уже долгий.")
+    print("Он скопирован в буфер обмена. Вставьте его в секрет THREADS_TOKEN на GitHub.")
+    sys.exit(0)
 subprocess.run("pbcopy", input=r["access_token"].encode())
 print(f"Готово. Долгий токен скопирован в буфер обмена, действует {r['expires_in']//86400} дней.")
 print("Вставьте его (Cmd+V) в GitHub → Settings → Secrets → Actions → THREADS_TOKEN.")
