@@ -5,6 +5,12 @@ import getpass, json, subprocess, sys, urllib.error, urllib.parse, urllib.reques
 
 short = getpass.getpass("Короткий токен из «Генератора маркеров» (ввод скрыт): ").strip()
 secret = getpass.getpass("Секрет приложения Threads (Настройки приложения Threads → Секрет приложения Threads): ").strip()
+import re
+if re.fullmatch(r"[0-9a-f]{32}", short) and len(secret) > 100:
+    sys.exit("Поля перепутаны: в первом вставлен секрет, а во втором токен. Запустите заново и вставьте наоборот.")
+print(f"Проверка: токен {len(short)} символов, начинается с THAA: {short.startswith('THAA')}; секрет {len(secret)} символов.")
+if not short.startswith("THAA") or len(short) < 100:
+    sys.exit("Это не похоже на токен доступа Threads (он длинный и начинается с THAA). Скопируйте его заново из «Генератора маркеров».")
 q = urllib.parse.urlencode({"grant_type": "th_exchange_token", "client_secret": secret, "access_token": short})
 try:
     r = json.load(urllib.request.urlopen(f"https://graph.threads.net/access_token?{q}"))
