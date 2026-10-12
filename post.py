@@ -12,9 +12,9 @@ state = json.load(open(state_path)) if os.path.exists(state_path) else {}
 state.setdefault("n", 0); state.setdefault("offset", 0); state.setdefault("pending", {})
 def save(): json.dump(state, open(state_path, "w"), ensure_ascii=False, indent=1)
 
-def http(url, data=None):
+def http(url, data=None, headers={}):
     try:
-        return json.load(urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=120))
+        return json.load(urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers), timeout=120))
     except urllib.error.HTTPError as e:
         sys.exit(f"Ошибка {e.code}: {e.read().decode()}")
 
@@ -29,6 +29,28 @@ def send_draft(n, text, note=""):
                                {"text": "⏭ Пропустить", "callback_data": f"no:{n}"}]]}
     m = tg("sendMessage", chat_id=CHAT(), text=(note + text), reply_markup=kb)
     state["pending"][str(n)]["msg_ids"].append(m["message_id"])
+
+# ---------- Claude: правки по просьбе ----------
+FACTS = """БЦ «Нурсаулет», Атырау, Махамбет Өтемісов 100, первая линия главной улицы. Цена 6 000 ₸ за м² в месяц; в стоимость включены
+коммуналка, мебель, ежедневная уборка. Свежий ремонт, светлые тона, потолки 3,2 м, сплит-система в каждом помещении, два этажа,
+несколько отдельных входов, автономное отопление, охрана, сигнализация, видеонаблюдение, решётки на окнах, пожарная сигнализация.
+Свет, вода, газ, канализация, отопление, вентиляция. Бесплатная парковка на территории под круглосуточным видеонаблюдением.
+Рядом остановки, супермаркет, кофейни, клиника. Контакт: WhatsApp +7 702 494 7000."""
+
+def revise(text, instruction):
+    system = ("Ты редактор постов для Threads об аренде офисов. Перепиши пост по просьбе владельца. Сохраняй язык поста (русский или казахский), "
+              "если не просят другой. Используй только факты из списка и исходного поста, ничего не выдумывай. Цена, адрес и WhatsApp должны остаться. "
+              "Не длиннее 500 символов. Пиши естественно, живо, без канцелярита. Верни только готовый текст поста, без пояснений.\n\nФакты:\n" + FACTS)
+    out = text
+    for _ in range(2):
+        r = http("https://api.anthropic.com/v1/messages", json.dumps({
+            "model": "claude-sonnet-5-5", "max_tokens": 1000, "system": system,
+            "messages": [{"role": "user", "content": f"Текущий пост:\n{text}\n\nПросьба владельца: {instruction}"}]}).encode(),
+            {"x-api-key": os.environ["ANTHROPIC_API_KEY"], "anthropic-version": "2023-06-01", "content-type": "application/json"})
+        out = r["content"][0]["text"].strip()
+        if len(out) <= 500: return out
+        instruction += " (сократи, строго до 450 символов)"
+    return out[:500]
 
 # ---------- Threads ----------
 API = "https://graph.threads.net/v1.0"
@@ -97,7 +119,12 @@ elif cmd == "poll":
             rid = msg["reply_to_message"]["message_id"]
             n = next((k for k, v in state["pending"].items() if rid in v["msg_ids"]), None)
             if n:
-                state["pending"][n]["text"] = msg["text"]
-                send_draft(n, msg["text"], "✏️ Ваш вариант:\n\n")
+                t = msg["text"].strip()
+                if t.startswith("="):      # «=текст» — свой текст целиком, без Claude
+                    new = t[1:].strip()
+                else:
+                    new = revise(state["pending"][n]["text"], t)
+                state["pending"][n]["text"] = new
+                send_draft(n, new, "✏️ Новый вариант:\n\n")
         save()
     save()
