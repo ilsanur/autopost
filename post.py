@@ -100,3 +100,4 @@ elif cmd == "poll":
                 state["pending"][n]["text"] = msg["text"]
                 send_draft(n, msg["text"], "✏️ Ваш вариант:\n\n")
         save()
+    save()
