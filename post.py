@@ -102,18 +102,24 @@ elif cmd == "draft":
 
 elif cmd == "poll":
     for u in tg("getUpdates", offset=state["offset"], timeout=0, allowed_updates=["callback_query", "message"]):
-        state["offset"] = u["update_id"] + 1
+        state["offset"] = u["update_id"] + 1; save()
         cb, msg = u.get("callback_query"), u.get("message")
         if cb and str(cb["message"]["chat"]["id"]) == CHAT():
             act, n = cb["data"].split(":"); p = state["pending"].get(n)
-            tg("answerCallbackQuery", callback_query_id=cb["id"])
+            try: tg("answerCallbackQuery", callback_query_id=cb["id"])
+            except SystemExit: pass          # кнопка слишком старая — не страшно
             mid = cb["message"]["message_id"]
             if not p:
                 tg("editMessageReplyMarkup", chat_id=CHAT(), message_id=mid, reply_markup={"inline_keyboard": []}); continue
             if act == "no":
                 state["pending"].pop(n); tg("editMessageText", chat_id=CHAT(), message_id=mid, text="⏭ Пропущено\n\n" + p["text"])
             else:
-                pid = publish(p["cab"], p["text"]); state["pending"].pop(n)
+                try:
+                    publish(p["cab"], p["text"])
+                except SystemExit as e:
+                    tg("sendMessage", chat_id=CHAT(), text=f"⚠️ Не удалось опубликовать: {e.code}\nНажмите «Опубликовать» ещё раз.")
+                    save(); continue
+                state["pending"].pop(n)
                 tg("editMessageText", chat_id=CHAT(), message_id=mid, text="✅ Опубликовано\n\n" + p["text"])
         elif msg and str(msg["chat"]["id"]) == CHAT() and msg.get("reply_to_message") and msg.get("text"):
             rid = msg["reply_to_message"]["message_id"]
