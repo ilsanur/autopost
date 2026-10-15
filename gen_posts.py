@@ -109,9 +109,10 @@ WhatsApp-қа жазыңыз, кеңсені көрсетеміз.""",
 
 def fmt(n): return f"{n:,}".replace(",", " ")
 
-out = {"cabinets": [c[0] for c in CABS], "ru": {}, "kk": {}}
+out = {"cabinets": [c[0] for c in CABS], "ru": {}, "kk": {}, "info": {}}
 for cid, m2, t_ru, t_kk, ready, who_ru, who_kk in CABS:
     total = fmt(m2 * PRICE_M2)
+    out["info"][cid] = {"m2": m2, "total": total, "ru": f"{t_ru} ({m2} м²)", "kk": f"{t_kk} ({m2} м²)", "who_ru": WHO[who_ru], "who_kk": WHO[who_kk]}
     out["ru"][cid] = [s.format(t=f"{t_ru} ({m2} м²)", tl=f"{t_ru.lower()} ({m2} м²)", total=total, ready=ready,
                                who=WHO[who_ru], phone=PHONE) for s in RU]
     out["kk"][cid] = [s.format(t=f"{t_kk} ({m2} м²)", total=total, who=WHO[who_kk], phone=PHONE) for s in KK]

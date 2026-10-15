@@ -1,23 +1,25 @@
-name: Check Telegram answers
+name: Bot
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 */3 * * *"   # перезапуск каждые 3 часа; старый запуск заменяется новым
   workflow_dispatch:
 permissions:
   contents: write
-concurrency: autopost
+concurrency:
+  group: bot
+  cancel-in-progress: true
 jobs:
-  poll:
+  serve:
     runs-on: ubuntu-latest
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
-      - run: python3 post.py poll
+      - run: |
+          git config user.name autopost; git config user.email autopost@users.noreply.github.com
+      - run: python3 post.py serve
         env:
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-      - run: |
-          git config user.name autopost; git config user.email autopost@users.noreply.github.com
-          git add state.json && (git diff --cached --quiet || (git commit -m state && git push))
