@@ -86,9 +86,13 @@ def publish(cab, text):
 
 # ---------- команды ----------
 def next_post():
-    n = state["n"]; lang = "ru" if n % 2 == 0 else "kk"; idx = n // 2
-    cab = posts["cabinets"][idx % len(posts["cabinets"])]
-    return n, lang, cab, posts[lang][cab][(idx // len(posts["cabinets"])) % len(posts[lang][cab])]
+    # 3 поста в день: утро — казахский, день — русский, вечер — казахский; весь день про один кабинет
+    n = state["n"]; slot = n % 3; d = n // 3; r = d // len(posts["cabinets"])
+    lang = "ru" if slot == 1 else "kk"
+    cab = posts["cabinets"][d % len(posts["cabinets"])]
+    k = len(posts[lang][cab])
+    var = r % k if lang == "ru" else (2 * r + (0 if slot == 0 else 1)) % k
+    return n, lang, cab, posts[lang][cab][var]
 
 cmd = sys.argv[1] if len(sys.argv) > 1 else "preview"
 if cmd == "preview":

@@ -1,8 +1,9 @@
 name: Draft to Telegram
 on:
   schedule:
-    - cron: "30 4 * * *"    # 09:30 Атырау — черновик на русском
-    - cron: "30 13 * * *"   # 18:30 Атырау — черновик на казахском
+    - cron: "30 4 * * *"    # 09:30 Атырау — казахский
+    - cron: "30 7 * * *"    # 12:30 Атырау — русский
+    - cron: "30 13 * * *"   # 18:30 Атырау — казахский
   workflow_dispatch:
 permissions:
   contents: write
